@@ -1,0 +1,51 @@
+databaseChangeLog:
+  - changeSet:
+      id: 4
+      author: Chuiko Vitali
+      dbms: postgresql
+      changes:
+        - createIndex:
+            indexName: idx_orders_user_id
+            tableName: orders
+            columns:
+              - column:
+                  name: user_id
+      rollback:
+        - dropIndex:
+            indexName: idx_orders_user_id
+            tableName: orders
+  - changeSet:
+      id: 5
+      author: Chuiko Vitali
+      dbms: postgresql
+      changes:
+        - createIndex:
+            indexName: idx_orders_status_created_at
+            tableName: orders
+            columns:
+              - column:
+                  name: status
+              - column:
+                  name: created_at
+      rollback:
+        - dropIndex:
+            indexName: idx_orders_status_created_at
+            tableName: orders
+  - changeSet:
+      id: 6
+      author: Chuiko Vitali
+      dbms: postgresql
+      changes:
+        - createIndex:
+            indexName: idx_order_items_order_id
+            tableName: order_items
+            columns:
+              - column:
+                  name: order_id
+      rollback:
+        - dropIndex:
+            indexName: idx_order_items_order_id
+            tableName: order_items
+
+
+

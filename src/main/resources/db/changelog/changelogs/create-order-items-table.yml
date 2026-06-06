@@ -1,0 +1,38 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3
+      author: Chuiko Vitali
+      dbms: postgresql
+      changes:
+        - createTable:
+            tableName: order_items
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: order_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_order_items_order_id
+                    references: orders(id)
+                    onDelete: CASCADE
+              - column:
+                  name: item_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_order_items_item_id
+                    references: items(id)
+                    onDelete: RESTRICT
+              - column:
+                  name: quantity
+                  type: integer
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+
