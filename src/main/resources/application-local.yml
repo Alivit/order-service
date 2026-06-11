@@ -8,3 +8,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  grpc:
+    client:
+      channels:
+        user-service:
+          address: static://localhost:9091

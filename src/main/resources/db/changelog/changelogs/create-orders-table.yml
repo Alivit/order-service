@@ -18,6 +18,18 @@ databaseChangeLog:
                   constraints:
                     nullable: false
               - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: deleted
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
                   name: status
                   type: varchar(50)
               - column:
