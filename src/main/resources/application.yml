@@ -11,7 +11,7 @@ spring:
       hibernate:
         format_sql: true
         default_schema: ${DATABASE_SCHEMA}
-        default_batch_fetch_size: 50
+        default_batch_fetch_size: 20
     open-in-view: false
   liquibase:
     enabled: true
