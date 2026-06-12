@@ -1,0 +1,38 @@
+services:
+  order-postgres:
+    image: postgres:18-alpine
+    container_name: order-postgres
+    environment:
+      POSTGRES_DB: ${DATABASE_DB}
+      POSTGRES_USER: ${DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_SCHEMA: ${DATABASE_SCHEMA}
+      APP_DB_USER: ${DOCKER_DB_USER}
+      APP_DB_PASSWORD: ${DOCKER_DB_PASSWORD}
+    volumes:
+      - ./docker-init/init-order-user.sh:/docker-entrypoint-initdb.d/init-order-user.sh
+      - order_pg_data:/var/lib/postgresql
+    ports:
+      - "5434:5432"
+
+  order-service:
+    build:
+      context: .
+    container_name: order-service
+    depends_on:
+      - order-postgres
+    env_file:
+      - '.env'
+    environment:
+      SERVER_PORT: 8083
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "8083:8083"
+
+networks:
+  default:
+    name: minispring-network
+    external: true
+
+volumes:
+  order_pg_data:
