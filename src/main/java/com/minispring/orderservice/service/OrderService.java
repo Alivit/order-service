@@ -1,32 +1,35 @@
 package com.minispring.orderservice.service;
 
-import com.minispring.orderservice.dto.OrderCreateDto;
-import com.minispring.orderservice.dto.OrderParamsDto;
-import com.minispring.orderservice.dto.OrderProfileDto;
-import com.minispring.orderservice.dto.OrderUpdateDto;
-import com.minispring.orderservice.dto.UserProfileDto;
+import com.minispring.orderservice.dto.request.OrderCreateRequest;
+import com.minispring.orderservice.dto.request.OrderSearchCriteria;
+import com.minispring.orderservice.dto.request.OrderUpdateRequest;
+import com.minispring.orderservice.dto.response.OrderPriceView;
+import com.minispring.orderservice.dto.response.OrderView;
+import com.minispring.orderservice.dto.response.UserProfileView;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.util.List;
-import java.util.UUID;
-
 public interface OrderService {
 
-    OrderProfileDto create(OrderCreateDto orderCreateDto, UserProfileDto user);
+    OrderView create(OrderCreateRequest orderCreateRequest, UserProfileView user);
 
-    OrderProfileDto getById(UUID orderId, UserProfileDto user);
+    OrderView getById(UUID orderId, UserProfileView user);
 
-    OrderProfileDto getByIdAndUserId(UUID orderId, UUID userId);
+    OrderView getByIdAndUserId(UUID orderId, UUID userId);
 
-    List<OrderProfileDto> getAllByUserId(UUID userId, UserProfileDto user, boolean includeDeleted);
+    List<OrderView> getAllByUserId(UUID userId, UserProfileView user, boolean includeDeleted);
 
-    Page<OrderProfileDto> getAllBy(OrderParamsDto orderParamsDto, Pageable pageable);
+    OrderPriceView getOrderPriceById(UUID orderId);
 
-    OrderProfileDto update(UUID orderId, OrderUpdateDto orderUpdateDto);
+    Page<OrderView> getAllBy(OrderSearchCriteria orderSearchCriteria, Pageable pageable);
+
+    OrderView update(UUID orderId, OrderUpdateRequest orderUpdateRequest);
 
     void delete(UUID orderId, UUID userId);
 
     void delete(UUID orderId);
 
+    void processPayment(UUID orderId, String paymentStatus);
 }

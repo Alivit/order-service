@@ -1,0 +1,77 @@
+databaseChangeLog:
+  - changeSet:
+      id: 7
+      author: Chuiko Vitali
+      dbms: postgresql
+      changes:
+        - insert:
+            tableName: items
+            columns:
+              - column: { name: name, value: "Игровой ноутбук" }
+              - column: { name: price, valueNumeric: 1499.99 }
+              - column: { name: created_at, valueComputed: "now()" }
+              - column: { name: updated_at, valueComputed: "now()" }
+        - insert:
+            tableName: items
+            columns:
+              - column: { name: name, value: "Беспроводная мышь" }
+              - column: { name: price, valueNumeric: 49.50 }
+              - column: { name: created_at, valueComputed: "now()" }
+              - column: { name: updated_at, valueComputed: "now()" }
+        - insert:
+            tableName: items
+            columns:
+              - column: { name: name, value: "Механическая клавиатура" }
+              - column: { name: price, valueNumeric: 89.99 }
+              - column: { name: created_at, valueComputed: "now()" }
+              - column: { name: updated_at, valueComputed: "now()" }
+        - insert:
+            tableName: items
+            columns:
+              - column: { name: name, value: "Монитор 27' 4K" }
+              - column: { name: price, valueNumeric: 349.00 }
+              - column: { name: created_at, valueComputed: "now()" }
+              - column: { name: updated_at, valueComputed: "now()" }
+        - insert:
+            tableName: items
+            columns:
+              - column: { name: name, value: "Беспроводные наушники" }
+              - column: { name: price, valueNumeric: 199.99 }
+              - column: { name: created_at, valueComputed: "now()" }
+              - column: { name: updated_at, valueComputed: "now()" }
+        - insert:
+            tableName: items
+            columns:
+              - column: { name: name, value: "Внешний SSD 1ТБ" }
+              - column: { name: price, valueNumeric: 115.00 }
+              - column: { name: created_at, valueComputed: "now()" }
+              - column: { name: updated_at, valueComputed: "now()" }
+        - insert:
+            tableName: items
+            columns:
+              - column: { name: name, value: "Веб-камера Full HD" }
+              - column: { name: price, valueNumeric: 65.25 }
+              - column: { name: created_at, valueComputed: "now()" }
+              - column: { name: updated_at, valueComputed: "now()" }
+        - insert:
+            tableName: items
+            columns:
+              - column: { name: name, value: "USB-C Хаб разветвитель" }
+              - column: { name: price, valueNumeric: 34.99 }
+              - column: { name: created_at, valueComputed: "now()" }
+              - column: { name: updated_at, valueComputed: "now()" }
+        - insert:
+            tableName: items
+            columns:
+              - column: { name: name, value: "Эргономичное кресло" }
+              - column: { name: price, valueNumeric: 270.00 }
+              - column: { name: created_at, valueComputed: "now()" }
+              - column: { name: updated_at, valueComputed: "now()" }
+        - insert:
+            tableName: items
+            columns:
+              - column: { name: name, value: "Настольная LED лампа" }
+              - column: { name: price, valueNumeric: 42.00 }
+              - column: { name: created_at, valueComputed: "now()" }
+              - column: { name: updated_at, valueComputed: "now()" }
+

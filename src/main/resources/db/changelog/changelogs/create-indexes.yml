@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 4
+      id: 5
       author: Chuiko Vitali
       dbms: postgresql
       changes:
@@ -15,7 +15,7 @@ databaseChangeLog:
             indexName: idx_orders_user_id
             tableName: orders
   - changeSet:
-      id: 5
+      id: 6
       author: Chuiko Vitali
       dbms: postgresql
       changes:
@@ -32,7 +32,7 @@ databaseChangeLog:
             indexName: idx_orders_status_created_at
             tableName: orders
   - changeSet:
-      id: 6
+      id: 7
       author: Chuiko Vitali
       dbms: postgresql
       changes:
@@ -46,6 +46,22 @@ databaseChangeLog:
         - dropIndex:
             indexName: idx_order_items_order_id
             tableName: order_items
-
-
-
+  - changeSet:
+      id: 8
+      author: System
+      dbms: postgresql
+      changes:
+        - createIndex:
+            indexName: idx_orders_price_lookup
+            tableName: orders
+            columns:
+              - column:
+                  name: id
+              - column:
+                  name: user_id
+              - column:
+                  name: total_price
+      rollback:
+        - dropIndex:
+            indexName: idx_orders_price_lookup
+            tableName: orders

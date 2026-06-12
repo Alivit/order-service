@@ -1,16 +1,53 @@
 spring:
+  config:
+    activate:
+      on-profile: local
   datasource:
-    url: ${DATABASE_URL}
-    username: ${DATABASE_USERNAME}
-    password: ${DATABASE_PASSWORD}
+    url: jdbc:postgresql://localhost:5432/${ORDER_DB_NAME}?currentSchema=${ORDER_DB_SCHEMA}
+    username: ${ORDER_DB_USERNAME}
+    password: ${ORDER_DB_PASSWORD}
   jpa:
     show-sql: true
     properties:
       hibernate:
         format_sql: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: https://localhost:${KC_HTTPS_PORT}/realms/${APP_REALM}/protocol/openid-connect/certs
+          issuer-uri: https://localhost:${KC_HTTPS_PORT}/realms/${APP_REALM}
+          audience: ${APP_CLIENT_ID}
   grpc:
     client:
       channels:
-        userServiceGrpc:
-          address: 'static://localhost:9091'
-          secure: false
+        user-service-grpc:
+          address: 'static://localhost:${USER_GRPC_SERVER_PORT}'
+          negotiation-type: plaintext
+    server:
+      port: ${ORDER_GRPC_SERVER_PORT}
+      reflection:
+        enabled: true
+  kafka:
+    bootstrap-servers: 'payment-kafka:${KAFKA_PORT}'
+
+decorator:
+  datasource:
+    p6spy:
+      enable-logging: false
+    datasource-proxy:
+      logging: slf4j
+      multiline: true
+      query:
+        enable-logging: true
+        log-level: info
+      slow-query:
+        enable-logging: true
+        log-level: warn
+
+logging:
+  level:
+    root: INFO
+    com.minispring.userservice: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.zalando.logbook: TRACE

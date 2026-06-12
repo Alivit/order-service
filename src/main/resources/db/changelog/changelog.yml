@@ -7,3 +7,5 @@ databaseChangeLog:
       file: db/changelog/changelogs/create-order-items-table.yml
   - include:
       file: db/changelog/changelogs/create-indexes.yml
+  - include:
+      file: db/changelog/changelogs/insert-initial-items.yml

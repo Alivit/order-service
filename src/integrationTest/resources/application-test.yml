@@ -25,6 +25,24 @@ spring:
     change-log: db/changelog/changelog.yml
     default-schema: public
 
+  security:
+    oauth2:
+      client:
+        registration:
+          user-service-internal:
+            provider: keycloak
+            client-id: "account"
+
+            authorization-grant-type: client_credentials
+        provider:
+          keycloak:
+            token-uri: "http://localhost:9999/dummy"
+      resourceserver:
+        jwt:
+          jwk-set-uri: "http://localhost:9999/dummy"
+          issuer-uri: "http://localhost:9999/dummy"
+          audience: "account"
+
   task:
     execution:
       pool:

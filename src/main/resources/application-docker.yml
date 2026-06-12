@@ -1,18 +1,67 @@
-server:
-  port: 8083
 spring:
+  config:
+    activate:
+      on-profile: docker
   datasource:
-    url: ${DOCKER_DATABASE_URL}
-    username: ${DOCKER_DB_USER}
-    password: ${DOCKER_DB_PASSWORD}
+    url: jdbc:postgresql://order-postgres:${ORDER_POSTGRES_PORT}/${ORDER_DB_NAME}?currentSchema=${ORDER_DB_SCHEMA}
+    username: ${ORDER_DB_USERNAME}
+    password: ${ORDER_DB_PASSWORD}
   jpa:
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
+  security:
+    oauth2:
+      client:
+        registration:
+          order-service-internal:
+            provider: keycloak
+            client-id: ${APP_CLIENT_ID}
+            client-authentication-method: none
+            authorization-grant-type: client_credentials
+        provider:
+          keycloak:
+            token-uri: https://keycloak:${KC_HTTPS_PORT}/realms/${APP_REALM}/protocol/openid-connect/token
+      resourceserver:
+        jwt:
+          jwk-set-uri: https://keycloak:${KC_HTTPS_PORT}/realms/${APP_REALM}/protocol/openid-connect/certs
+          issuer-uri: https://keycloak:${KC_HTTPS_PORT}/realms/${APP_REALM}
+          audience: ${APP_CLIENT_ID}
+  ssl:
+    bundle:
+      pem:
+        keycloak-mtls:
+          keystore:
+            certificate: "file:/app/certs/auth-client.crt"
+            private-key: "file:/app/certs/auth-client.key"
+          truststore:
+            certificate: "file:/app/certs/root-ca.crt"
   grpc:
     client:
       channels:
-        userServiceGrpc:
-          address: 'static://user-service:9091'
-          secure: false
+        user-service-grpc:
+          address: 'user-service:${USER_GRPC_SERVER_PORT}'
+          negotiation-type: plaintext
+    server:
+      port: ${ORDER_GRPC_SERVER_PORT}
+      reflection:
+        enabled: true
+  kafka:
+    bootstrap-servers: 'payment-kafka:${KAFKA_PORT}'
+
+decorator:
+  datasource:
+    datasource-proxy:
+      query:
+        enable-logging: false
+      slow-query:
+        enable-logging: true
+        log-level: warn
+
+logging:
+  level:
+    root: INFO
+    com.minispring.userservice: INFO
+    org.hibernate.SQL: OFF
+    org.zalando.logbook: OFF

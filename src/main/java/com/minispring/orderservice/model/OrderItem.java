@@ -18,7 +18,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class OrderItem {
+public class OrderItem extends AuditableEntity {
 
     public OrderItem(Order order, Item item, Integer quantity) {
         this.order = order;

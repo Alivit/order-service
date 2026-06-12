@@ -1,10 +1,10 @@
-package com.minispring.orderservice.dto;
+package com.minispring.orderservice.dto.response;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
-public record UserProfileDto(
+public record UserProfileView(
         UUID id,
         String name,
         String surname,
@@ -13,6 +13,4 @@ public record UserProfileDto(
         Boolean active,
         Boolean deleted,
         Instant createdAt,
-        Instant updatedAt
-) {
-}
+        Instant updatedAt) {}

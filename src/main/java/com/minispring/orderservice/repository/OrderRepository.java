@@ -1,8 +1,14 @@
 package com.minispring.orderservice.repository;
 
-import com.minispring.orderservice.dto.OrderParamsDto;
+import com.minispring.orderservice.dto.request.OrderSearchCriteria;
+import com.minispring.orderservice.dto.response.OrderPriceView;
 import com.minispring.orderservice.model.Order;
 import jakarta.persistence.criteria.Predicate;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -14,16 +20,10 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.CollectionUtils;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
 @Repository
 public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecificationExecutor<Order> {
 
-    @Query(value = "SELECT * FROM orders WHERE id = :id", nativeQuery = true)
+    @Query("SELECT o FROM Order o WHERE o.id = :id")
     Optional<Order> findOrderByIdIncludingDeleted(@Param("id") UUID id);
 
     @Query("SELECT o FROM Order o WHERE o.userId = :userId AND (:includeDeleted = true OR o.deleted = false)")
@@ -31,28 +31,39 @@ public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecific
 
     Optional<Order> findByIdAndUserIdAndDeletedFalse(UUID id, UUID userId);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("UPDATE Order o SET o.deleted = true, o.updatedAt = :now WHERE o.id = :orderId AND o.userId = :userId")
-    int deleteOrderByIdAndUserId(@Param("orderId") UUID orderId, @Param("userId") UUID userId, @Param("now") Instant now);
+    Optional<Order> findByIdAndDeletedFalse(UUID id);
+
+    @Query("""
+           SELECT new com.minispring.orderservice.dto.response.OrderPriceView(o.id, o.userId, o.totalPrice)\s
+           FROM Order o\s
+           WHERE o.id = :orderId AND o.deleted = false
+          \s""")
+    Optional<OrderPriceView> findOrderPriceByIdAndDeletedFalse(@Param("orderId") UUID orderId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("UPDATE Order o SET o.deleted = true, o.updatedAt = :now WHERE o.id = :orderId")
+    @Query(
+            "UPDATE Order o SET o.deleted = true, o.updatedAt = :now WHERE o.id = :orderId AND o.userId = :userId AND o.deleted = false")
+    int deleteOrderByIdAndUserId(
+            @Param("orderId") UUID orderId, @Param("userId") UUID userId, @Param("now") Instant now);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Order o SET o.deleted = true, o.updatedAt = :now WHERE o.id = :orderId AND o.deleted = false")
     int deleteOrderById(@Param("orderId") UUID orderId, @Param("now") Instant now);
 
-    default Page<Order> findByParams(OrderParamsDto params, Pageable pageable) {
+    default Page<Order> findByParams(OrderSearchCriteria params, Pageable pageable) {
         if (params == null) {
             return findAll(isDeletedFilter(false), pageable);
         }
-        
+
         Specification<Order> specification = Specification.where(statusesIn(params.statuses()))
                 .and(createdAtBetween(params.createdAtFrom(), params.createdAtTo()))
                 .and(isDeletedFilter(params.includeDeleted()));
 
         return findAll(specification, pageable);
     }
-    
+
     private Specification<Order> isDeletedFilter(Boolean includeDeleted) {
-        return (root, query, cb) -> {
+        return (root, _, cb) -> {
             if (Boolean.TRUE.equals(includeDeleted)) {
                 return null;
             }
@@ -61,12 +72,12 @@ public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecific
     }
 
     private Specification<Order> statusesIn(List<String> statuses) {
-        return (root, query, cb) ->
+        return (root, _, _) ->
                 CollectionUtils.isEmpty(statuses) ? null : root.get("status").in(statuses);
     }
 
     private Specification<Order> createdAtBetween(Instant from, Instant to) {
-        return (root, query, cb) -> {
+        return (root, _, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
             if (from != null) predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), from));

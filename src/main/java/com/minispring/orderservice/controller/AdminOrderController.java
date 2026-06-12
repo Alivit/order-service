@@ -1,11 +1,14 @@
 package com.minispring.orderservice.controller;
 
-import com.minispring.orderservice.dto.OrderCreateDto;
-import com.minispring.orderservice.dto.OrderParamsDto;
-import com.minispring.orderservice.dto.OrderProfileDto;
-import com.minispring.orderservice.dto.OrderUpdateDto;
+import com.minispring.orderservice.dto.request.OrderCreateRequest;
+import com.minispring.orderservice.dto.request.OrderSearchCriteria;
+import com.minispring.orderservice.dto.request.OrderUpdateRequest;
+import com.minispring.orderservice.dto.response.OrderView;
 import com.minispring.orderservice.service.facade.OrderFacade;
 import jakarta.validation.Valid;
+import java.net.URI;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,10 +25,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.net.URI;
-import java.util.List;
-import java.util.UUID;
-
 @RestController
 @RequestMapping("api/v1/admin/orders")
 @RequiredArgsConstructor
@@ -34,11 +33,10 @@ public class AdminOrderController {
     private final OrderFacade orderFacade;
 
     @PostMapping
-    public ResponseEntity<OrderProfileDto> create(@Valid @RequestBody OrderCreateDto request,
-                                                  @RequestParam(value = "userEmail") String userEmail){
-        OrderProfileDto response = orderFacade.createOrder(request, userEmail);
-        URI location = ServletUriComponentsBuilder
-                .fromCurrentRequest()
+    public ResponseEntity<OrderView> create(
+            @Valid @RequestBody OrderCreateRequest request, @RequestParam(value = "userEmail") String userEmail) {
+        OrderView response = orderFacade.createOrder(request, userEmail);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(response.id())
                 .toUri();
@@ -46,33 +44,28 @@ public class AdminOrderController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<OrderProfileDto> getOrderById(@PathVariable UUID id,
-                                                        @RequestParam(value = "userEmail") String userEmail
-    ) {
+    public ResponseEntity<OrderView> getOrderById(
+            @PathVariable UUID id, @RequestParam(value = "userEmail") String userEmail) {
         return ResponseEntity.ok(orderFacade.getOrderByIdAndEmail(id, userEmail));
     }
 
     @GetMapping
-    public ResponseEntity<Page<OrderProfileDto>> getAllOrders(
-            OrderParamsDto params,
-            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable
-    ) {
+    public ResponseEntity<Page<OrderView>> getAllOrders(
+            @Valid OrderSearchCriteria params, @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
         return ResponseEntity.ok(orderFacade.getAllOrdersBy(params, pageable));
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<OrderProfileDto>> getUserOrders(
+    public ResponseEntity<List<OrderView>> getUserOrders(
             @PathVariable UUID userId,
-            @RequestParam(value = "includeDeleted", defaultValue = "false") boolean includeDeleted
-    ) {
+            @RequestParam(value = "includeDeleted", defaultValue = "false") boolean includeDeleted) {
         return ResponseEntity.ok(orderFacade.getAllOrdersByUserId(userId, includeDeleted));
     }
 
     @PutMapping("/{id}/status")
-    public ResponseEntity<OrderProfileDto> updateOrderStatus(@PathVariable UUID id,
-                                                             @Valid @RequestBody OrderUpdateDto orderUpdateDto
-    ) {
-        return ResponseEntity.ok(orderFacade.updateOrderStatus(id, orderUpdateDto));
+    public ResponseEntity<OrderView> updateOrderStatus(
+            @PathVariable UUID id, @Valid @RequestBody OrderUpdateRequest orderUpdateRequest) {
+        return ResponseEntity.ok(orderFacade.updateOrderStatus(id, orderUpdateRequest));
     }
 
     @DeleteMapping("/{id}")

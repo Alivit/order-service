@@ -3,6 +3,9 @@ spring:
     active: local
   application:
     name: order-service
+  threads:
+    virtual:
+      enabled: true
   jpa:
     hibernate:
       ddl-auto: none
@@ -10,14 +13,66 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        default_schema: ${DATABASE_SCHEMA}
+        default_schema: ${ORDER_DB_SCHEMA}
         default_batch_fetch_size: 20
     open-in-view: false
   liquibase:
     enabled: true
     change-log: db/changelog/changelog.yml
-    default-schema: ${DATABASE_SCHEMA}
+    default-schema: ${ORDER_DB_SCHEMA}
   data:
     web:
       pageable:
         serialization-mode: via_dto
+  kafka:
+    listener:
+      ack-mode: MANUAL_IMMEDIATE
+    consumer:
+      group-id: order-service-group
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: com.minispring.orderservice.messaging.kafka.deserializer.JacksonKafkaDeserializer
+resilience4j.circuitbreaker:
+  instances:
+    userServiceGrpc:
+      ignoreExceptions:
+        - com.minispring.orderservice.exception.ResourceNotFoundException
+        - io.grpc.StatusRuntimeException
+logbook:
+  format:
+    style: json
+  strategy: default
+  obfuscate:
+    parameters:
+      - password
+      - secret
+      - token
+      - cvv
+      - cardNumber
+      - number
+  predicate:
+    exclude:
+      - path: /actuator/**
+      - path: /swagger-ui/**
+      - path: /v3/api-docs/**
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  info:
+    env:
+      enabled: true
+app:
+  grpc:
+    timeout:
+      seconds: 5
+  kafka:
+    topics:
+      payment-events: "payment-events"

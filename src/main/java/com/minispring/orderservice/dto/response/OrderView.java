@@ -1,25 +1,21 @@
-package com.minispring.orderservice.dto;
+package com.minispring.orderservice.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.minispring.orderservice.model.Status;
-import lombok.Builder;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import lombok.Builder;
 
 @Builder(toBuilder = true)
-public record OrderProfileDto(
+public record OrderView(
         UUID id,
         Status status,
         BigDecimal totalPrice,
-        @JsonIgnore
-        UUID userId,
-        UserProfileDto user,
+        @JsonIgnore UUID userId,
+        UserProfileView user,
         Boolean userServiceAvailable,
-        List<ItemDto> items,
+        List<ItemView> items,
         Instant createdAt,
-        Instant updatedAt
-) {
-}
+        Instant updatedAt) {}

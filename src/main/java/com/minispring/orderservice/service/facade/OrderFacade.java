@@ -1,78 +1,75 @@
 package com.minispring.orderservice.service.facade;
 
-import com.minispring.orderservice.client.UserGrpClient;
-import com.minispring.orderservice.dto.OrderCreateDto;
-import com.minispring.orderservice.dto.OrderParamsDto;
-import com.minispring.orderservice.dto.OrderProfileDto;
-import com.minispring.orderservice.dto.OrderUpdateDto;
-import com.minispring.orderservice.dto.UserProfileDto;
+import com.minispring.orderservice.client.UserGrpcClient;
+import com.minispring.orderservice.dto.request.OrderCreateRequest;
+import com.minispring.orderservice.dto.request.OrderSearchCriteria;
+import com.minispring.orderservice.dto.request.OrderUpdateRequest;
+import com.minispring.orderservice.dto.response.OrderView;
+import com.minispring.orderservice.dto.response.UserProfileView;
 import com.minispring.orderservice.exception.ServiceUnavailableException;
 import com.minispring.orderservice.service.OrderService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Component;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 public class OrderFacade {
 
     private final OrderService orderService;
-    private final UserGrpClient userGrpcService;
+    private final UserGrpcClient userGrpcService;
 
-    public OrderProfileDto createOrder(OrderCreateDto orderCreateDto, String email) {
-        UserProfileDto user = userGrpcService.getUserByEmail(email);
+    public OrderView createOrder(OrderCreateRequest orderCreateRequest, String email) {
+        UserProfileView user = userGrpcService.getUserByEmail(email);
         if (user == null) {
             throw new ServiceUnavailableException("User service unavailable");
         }
-        return orderService.create(orderCreateDto, user);
+        return orderService.create(orderCreateRequest, user);
     }
 
-    public OrderProfileDto getOrderByIdAndEmail(UUID orderId, String email) {
-        UserProfileDto user = userGrpcService.getUserByEmail(email);
+    public OrderView getOrderByIdAndEmail(UUID orderId, String email) {
+        UserProfileView user = userGrpcService.getUserByEmail(email);
         return orderService.getById(orderId, user);
     }
 
-    public OrderProfileDto getOrderByIdAndUserId(UUID orderId, UUID userId) {
-        OrderProfileDto order = orderService.getByIdAndUserId(orderId, userId);
-        UserProfileDto user = userGrpcService.getUserById(userId);
+    public OrderView getOrderByIdAndUserId(UUID orderId, UUID userId) {
+        OrderView order = orderService.getByIdAndUserId(orderId, userId);
+        UserProfileView user = userGrpcService.getUserById(userId);
 
         return order.toBuilder().user(user).userServiceAvailable(user != null).build();
     }
 
-    public List<OrderProfileDto> getAllOrdersByUserId(UUID userId, boolean includeDeleted) {
-        UserProfileDto user = userGrpcService.getUserById(userId);
+    public List<OrderView> getAllOrdersByUserId(UUID userId, boolean includeDeleted) {
+        UserProfileView user = userGrpcService.getUserById(userId);
         return orderService.getAllByUserId(userId, user, includeDeleted);
     }
 
-    public Page<OrderProfileDto> getAllOrdersBy(OrderParamsDto orderDto, Pageable pageable) {
-        Page<OrderProfileDto> dtoPage = orderService.getAllBy(orderDto, pageable);
+    public Page<OrderView> getAllOrdersBy(OrderSearchCriteria orderDto, Pageable pageable) {
+        Page<OrderView> dtoPage = orderService.getAllBy(orderDto, pageable);
 
         if (dtoPage.isEmpty()) {
             return dtoPage;
         }
 
-        Set<UUID> userIds = dtoPage.getContent().stream()
-                .map(OrderProfileDto::userId)
-                .collect(Collectors.toSet());
+        Set<UUID> userIds = dtoPage.getContent().stream().map(OrderView::userId).collect(Collectors.toSet());
 
-        Map<UUID, UserProfileDto> usersMap = userGrpcService.getUsersByIds(userIds);
+        Map<UUID, UserProfileView> usersMap = userGrpcService.getUsersByIds(userIds);
 
         return dtoPage.map(dto -> {
-            UserProfileDto user = usersMap.get(dto.userId());
+            UserProfileView user = usersMap.get(dto.userId());
             return dto.toBuilder().user(user).userServiceAvailable(user != null).build();
         });
     }
 
-    public OrderProfileDto updateOrderStatus(UUID orderId, OrderUpdateDto orderUpdateDto) {
-        OrderProfileDto order = orderService.update(orderId, orderUpdateDto);
-        UserProfileDto user = userGrpcService.getUserById(order.userId());
+    public OrderView updateOrderStatus(UUID orderId, OrderUpdateRequest orderUpdateRequest) {
+        OrderView order = orderService.update(orderId, orderUpdateRequest);
+        UserProfileView user = userGrpcService.getUserById(order.userId());
         return order.toBuilder().user(user).userServiceAvailable(user != null).build();
     }
 
@@ -83,5 +80,4 @@ public class OrderFacade {
     public void deleteOrder(UUID orderId) {
         orderService.delete(orderId);
     }
-
 }

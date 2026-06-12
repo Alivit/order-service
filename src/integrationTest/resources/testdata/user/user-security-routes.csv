@@ -1,0 +1,5 @@
+method,route
+POST,/api/v1/orders
+GET,/api/v1/orders/123e4567-e89b-12d3-a456-426614174000
+GET,/api/v1/orders
+DELETE,/api/v1/orders/123e4567-e89b-12d3-a456-426614174000

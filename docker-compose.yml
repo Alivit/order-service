@@ -1,33 +1,41 @@
 services:
   order-postgres:
-    image: postgres:18-alpine
+    image: postgres:${POSTGRES_VERSION}
     container_name: order-postgres
     environment:
-      POSTGRES_DB: ${DATABASE_DB}
-      POSTGRES_USER: ${DATABASE_USERNAME}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
-      POSTGRES_SCHEMA: ${DATABASE_SCHEMA}
-      APP_DB_USER: ${DOCKER_DB_USER}
-      APP_DB_PASSWORD: ${DOCKER_DB_PASSWORD}
+      POSTGRES_DB: ${ORDER_DB_NAME}
+      POSTGRES_USER: ${ORDER_DB_ROOT_USER}
+      POSTGRES_PASSWORD: ${ORDER_DB_ROOT_PASSWORD}
+      ORDER_DB_USER: ${ORDER_DB_USERNAME}
+      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD}
+      ORDER_DB_SCHEMA: ${ORDER_DB_SCHEMA}
     volumes:
       - ./docker-init/init-order-user.sh:/docker-entrypoint-initdb.d/init-order-user.sh
       - order_pg_data:/var/lib/postgresql
     ports:
-      - "5434:5432"
+      - "${ORDER_POSTGRES_PORT}:5432"
+    deploy:
+      resources:
+        limits:
+          memory: 800M
+    command: ["postgres", "-c", "shared_buffers=256MB","-c", "synchronous_commit=off","-c", "max_connections=50"]
 
   order-service:
     build:
       context: .
     container_name: order-service
-    depends_on:
-      - order-postgres
     env_file:
       - '.env'
     environment:
-      SERVER_PORT: 8083
+      SERVER_PORT: ${ORDER_SERVICE_PORT}
+      GRPC_SERVER_PORT: ${ORDER_GRPC_SERVER_PORT}
       SPRING_PROFILES_ACTIVE: docker
     ports:
-      - "8083:8083"
+      - "${ORDER_SERVICE_PORT}:${ORDER_SERVICE_PORT}"
+    volumes:
+      - ../auth-service/certs:/app/certs:ro
+    depends_on:
+      - order-postgres
 
 networks:
   default:

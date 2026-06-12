@@ -1,23 +1,21 @@
 package com.minispring.orderservice.mapper;
 
 import com.minispring.grpc.service.UserDto;
-import com.minispring.orderservice.dto.UserProfileDto;
+import com.minispring.orderservice.dto.response.UserProfileView;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.UUID;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
 import org.mapstruct.ReportingPolicy;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.util.UUID;
-
-@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE,
-        componentModel = MappingConstants.ComponentModel.SPRING)
+@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE, componentModel = MappingConstants.ComponentModel.SPRING)
 public interface UserMapper {
 
     @Mapping(target = "id", source = "user")
     @Mapping(target = "birthDate", source = "user")
-    UserProfileDto fromGrpcToUserProfileDto(UserDto user);
+    UserProfileView toView(UserDto user);
 
     default UUID mapUuid(UserDto user) {
         return (user == null || user.getId().isBlank()) ? null : UUID.fromString(user.getId());

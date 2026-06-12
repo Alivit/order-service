@@ -1,11 +1,22 @@
 package com.minispring.orderservice;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+
+import com.minispring.orderservice.client.UserGrpcClient;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
+import org.mockito.Mockito;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
@@ -14,18 +25,40 @@ import org.testcontainers.utility.DockerImageName;
 @ActiveProfiles("test")
 public abstract class BaseIntegrationTest {
 
-    @Container
-    protected static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
-            DockerImageName.parse("postgres:18-alpine"))
-            .withDatabaseName("user_service_test")
-            .withUsername("test")
-            .withPassword("test")
-            .withReuse(true);
+    @MockitoBean
+    protected JwtDecoder jwtDecoder;
 
-    @DynamicPropertySource
-    static void configure(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
+    @MockitoBean
+    protected UserGrpcClient userGrpcClient;
+
+    @MockitoBean
+    protected OAuth2AuthorizedClientManager authorizedClientManager;
+
+    @ServiceConnection
+    static PostgreSQLContainer<?> postgreSQLContainer =
+            new PostgreSQLContainer<>(DockerImageName.parse("postgres:18-alpine"));
+
+    static {
+        postgreSQLContainer.start();
+    }
+
+    @AfterEach
+    void resetMocks() {
+        Mockito.reset(jwtDecoder, userGrpcClient);
+    }
+
+    protected RequestPostProcessor adminJwt(UUID adminId) {
+        return jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))
+                .jwt(builder -> builder.subject(adminId.toString())
+                        .claim("realmAccess", Map.of("roles", List.of("ADMIN")))
+                        .claim("preferred_username", "testdata/admin"));
+    }
+
+    protected RequestPostProcessor userJwt(UUID userId, String email) {
+        return jwt().authorities(new SimpleGrantedAuthority("ROLE_USER"))
+                .jwt(builder -> builder.subject(userId.toString())
+                        .claim("email", email)
+                        .claim("realmAccess", Map.of("roles", List.of("USER")))
+                        .claim("preferred_username", "regularUser"));
     }
 }

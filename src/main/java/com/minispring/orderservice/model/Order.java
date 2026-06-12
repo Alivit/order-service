@@ -1,6 +1,8 @@
 package com.minispring.orderservice.model;
 
-import com.minispring.orderservice.dto.OrderItemCreateDto;
+import static com.minispring.orderservice.exception.ExceptionAnswer.ITEM_NOT_FOUND;
+
+import com.minispring.orderservice.dto.request.OrderItemCreateRequest;
 import com.minispring.orderservice.exception.ResourceNotFoundException;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -11,24 +13,19 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
-import lombok.Getter;
-import lombok.Setter;
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.UuidGenerator;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import static com.minispring.orderservice.exception.ExceptionAnswer.ITEM_NOT_FOUND;
+import lombok.Getter;
+import lombok.Setter;
+import org.hibernate.annotations.UuidGenerator;
 
 @Entity
 @Table(name = "orders")
 @Getter
 @Setter
-@SQLDelete(sql = "UPDATE orders SET deleted = true WHERE id = ? AND version = ?")
 public class Order extends AuditableEntity {
 
     @Id
@@ -52,11 +49,11 @@ public class Order extends AuditableEntity {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
 
-    public void addItems(List<OrderItemCreateDto> dtoList, Map<Long, Item> itemsMap) {
+    public void addItems(List<OrderItemCreateRequest> dtoList, Map<Long, Item> itemsMap) {
         this.totalPrice = BigDecimal.ZERO;
         this.items.clear();
 
-        for (OrderItemCreateDto dto : dtoList) {
+        for (OrderItemCreateRequest dto : dtoList) {
             Item item = itemsMap.get(dto.itemId());
             if (item == null) {
                 throw new ResourceNotFoundException(String.format(ITEM_NOT_FOUND, dto.itemId()));
@@ -67,5 +64,4 @@ public class Order extends AuditableEntity {
             this.totalPrice = this.totalPrice.add(item.getPrice().multiply(BigDecimal.valueOf(dto.quantity())));
         }
     }
-
 }

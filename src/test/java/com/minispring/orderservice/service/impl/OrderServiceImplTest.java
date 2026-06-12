@@ -1,11 +1,22 @@
 package com.minispring.orderservice.service.impl;
 
-import com.minispring.orderservice.dto.OrderCreateDto;
-import com.minispring.orderservice.dto.OrderItemCreateDto;
-import com.minispring.orderservice.dto.OrderParamsDto;
-import com.minispring.orderservice.dto.OrderProfileDto;
-import com.minispring.orderservice.dto.OrderUpdateDto;
-import com.minispring.orderservice.dto.UserProfileDto;
+import static com.minispring.orderservice.exception.ExceptionAnswer.ITEM_NOT_FOUND;
+import static com.minispring.orderservice.exception.ExceptionAnswer.ORDER_NOT_FOUND;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+
+import com.minispring.orderservice.dto.request.OrderCreateRequest;
+import com.minispring.orderservice.dto.request.OrderItemCreateRequest;
+import com.minispring.orderservice.dto.request.OrderSearchCriteria;
+import com.minispring.orderservice.dto.request.OrderUpdateRequest;
+import com.minispring.orderservice.dto.response.OrderView;
+import com.minispring.orderservice.dto.response.UserProfileView;
 import com.minispring.orderservice.exception.ResourceNotFoundException;
 import com.minispring.orderservice.mapper.OrderMapper;
 import com.minispring.orderservice.model.Item;
@@ -13,6 +24,10 @@ import com.minispring.orderservice.model.Order;
 import com.minispring.orderservice.model.Status;
 import com.minispring.orderservice.repository.ItemRepository;
 import com.minispring.orderservice.repository.OrderRepository;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.instancio.Instancio;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -25,22 +40,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-import static com.minispring.orderservice.exception.ExceptionAnswer.ITEM_NOT_FOUND;
-import static com.minispring.orderservice.exception.ExceptionAnswer.ORDER_NOT_FOUND;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anySet;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 public class OrderServiceImplTest {
@@ -60,21 +59,21 @@ public class OrderServiceImplTest {
     @Nested
     class CreateTest {
 
-        private OrderCreateDto createDto;
-        private UserProfileDto userProfileDto;
+        private OrderCreateRequest createDto;
+        private UserProfileView userProfileView;
         private Order order;
-        private OrderProfileDto expectedDto;
+        private OrderView expectedDto;
         private List<Item> items;
 
         @BeforeEach
         void init() {
-            createDto = Instancio.create(OrderCreateDto.class);
-            userProfileDto = Instancio.create(UserProfileDto.class);
+            createDto = Instancio.create(OrderCreateRequest.class);
+            userProfileView = Instancio.create(UserProfileView.class);
             order = Instancio.create(Order.class);
-            expectedDto = Instancio.create(OrderProfileDto.class);
+            expectedDto = Instancio.create(OrderView.class);
 
             List<Long> generatedItemIds = createDto.items().stream()
-                    .map(OrderItemCreateDto::itemId)
+                    .map(OrderItemCreateRequest::itemId)
                     .toList();
 
             items = Instancio.ofList(Item.class).size(generatedItemIds.size()).create();
@@ -86,12 +85,12 @@ public class OrderServiceImplTest {
 
         @Test
         void createShouldReturnOrderProfileDto() {
-            given(orderMapper.orderCreateDtoToOrder(createDto)).willReturn(order);
+            given(orderMapper.toEntity(createDto)).willReturn(order);
             given(itemRepository.findAllById(anySet())).willReturn(items);
             given(orderRepository.save(order)).willReturn(order);
-            given(orderMapper.orderToOrderProfileDto(order, userProfileDto)).willReturn(expectedDto);
+            given(orderMapper.toView(order, userProfileView)).willReturn(expectedDto);
 
-            OrderProfileDto result = orderService.create(createDto, userProfileDto);
+            OrderView result = orderService.create(createDto, userProfileView);
 
             assertThat(result).isNotNull().isEqualTo(expectedDto);
             verify(orderRepository).save(order);
@@ -99,12 +98,12 @@ public class OrderServiceImplTest {
 
         @Test
         void createShouldThrowResourceNotFoundExceptionWhenItemDoesNotExist() {
-            given(orderMapper.orderCreateDtoToOrder(createDto)).willReturn(order);
+            given(orderMapper.toEntity(createDto)).willReturn(order);
             given(itemRepository.findAllById(anySet())).willReturn(List.of());
 
             Long invalidItemId = createDto.items().getFirst().itemId();
 
-            assertThatThrownBy(() -> orderService.create(createDto, userProfileDto))
+            assertThatThrownBy(() -> orderService.create(createDto, userProfileView))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessage(String.format(ITEM_NOT_FOUND, invalidItemId));
 
@@ -118,14 +117,14 @@ public class OrderServiceImplTest {
         @Test
         void getByIdShouldReturnOrderProfileDtoWhenOrderExists() {
             UUID orderId = UUID.randomUUID();
-            UserProfileDto userProfileDto = Instancio.create(UserProfileDto.class);
+            UserProfileView userProfileView = Instancio.create(UserProfileView.class);
             Order order = Instancio.create(Order.class);
-            OrderProfileDto expectedDto = Instancio.create(OrderProfileDto.class);
+            OrderView expectedDto = Instancio.create(OrderView.class);
 
             given(orderRepository.findOrderByIdIncludingDeleted(orderId)).willReturn(Optional.of(order));
-            given(orderMapper.orderToOrderProfileDto(order, userProfileDto)).willReturn(expectedDto);
+            given(orderMapper.toView(order, userProfileView)).willReturn(expectedDto);
 
-            OrderProfileDto result = orderService.getById(orderId, userProfileDto);
+            OrderView result = orderService.getById(orderId, userProfileView);
 
             assertThat(result).isNotNull().isEqualTo(expectedDto);
         }
@@ -133,11 +132,11 @@ public class OrderServiceImplTest {
         @Test
         void getByIdShouldThrowResourceNotFoundExceptionWhenOrderDoesNotExist() {
             UUID orderId = UUID.randomUUID();
-            UserProfileDto userProfileDto = Instancio.create(UserProfileDto.class);
+            UserProfileView userProfileView = Instancio.create(UserProfileView.class);
 
             given(orderRepository.findOrderByIdIncludingDeleted(orderId)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> orderService.getById(orderId, userProfileDto))
+            assertThatThrownBy(() -> orderService.getById(orderId, userProfileView))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessage(String.format(ORDER_NOT_FOUND, orderId));
 
@@ -153,12 +152,13 @@ public class OrderServiceImplTest {
             UUID orderId = UUID.randomUUID();
             UUID userId = UUID.randomUUID();
             Order order = Instancio.create(Order.class);
-            OrderProfileDto expectedDto = Instancio.create(OrderProfileDto.class);
+            OrderView expectedDto = Instancio.create(OrderView.class);
 
-            given(orderRepository.findByIdAndUserIdAndDeletedFalse(orderId, userId)).willReturn(Optional.of(order));
-            given(orderMapper.orderToOrderProfileDto(order, null)).willReturn(expectedDto);
+            given(orderRepository.findByIdAndUserIdAndDeletedFalse(orderId, userId))
+                    .willReturn(Optional.of(order));
+            given(orderMapper.toView(order, null)).willReturn(expectedDto);
 
-            OrderProfileDto result = orderService.getByIdAndUserId(orderId, userId);
+            OrderView result = orderService.getByIdAndUserId(orderId, userId);
 
             assertThat(result).isNotNull().isEqualTo(expectedDto);
         }
@@ -168,7 +168,8 @@ public class OrderServiceImplTest {
             UUID orderId = UUID.randomUUID();
             UUID userId = UUID.randomUUID();
 
-            given(orderRepository.findByIdAndUserIdAndDeletedFalse(orderId, userId)).willReturn(Optional.empty());
+            given(orderRepository.findByIdAndUserIdAndDeletedFalse(orderId, userId))
+                    .willReturn(Optional.empty());
 
             assertThatThrownBy(() -> orderService.getByIdAndUserId(orderId, userId))
                     .isInstanceOf(ResourceNotFoundException.class)
@@ -184,16 +185,17 @@ public class OrderServiceImplTest {
         @Test
         void getAllByUserIdShouldReturnListOfOrderProfileDto() {
             UUID userId = UUID.randomUUID();
-            UserProfileDto userProfileDto = Instancio.create(UserProfileDto.class);
+            UserProfileView userProfileView = Instancio.create(UserProfileView.class);
             boolean includeDeleted = true;
             List<Order> orders = Instancio.ofList(Order.class).size(2).create();
-            List<OrderProfileDto> expectedList = Instancio.ofList(OrderProfileDto.class).size(2).create();
+            List<OrderView> expectedList =
+                    Instancio.ofList(OrderView.class).size(2).create();
 
             given(orderRepository.findAllByUserId(userId, includeDeleted)).willReturn(orders);
-            given(orderMapper.orderToOrderProfileDto(orders.get(0), userProfileDto)).willReturn(expectedList.get(0));
-            given(orderMapper.orderToOrderProfileDto(orders.get(1), userProfileDto)).willReturn(expectedList.get(1));
+            given(orderMapper.toView(orders.get(0), userProfileView)).willReturn(expectedList.get(0));
+            given(orderMapper.toView(orders.get(1), userProfileView)).willReturn(expectedList.get(1));
 
-            List<OrderProfileDto> result = orderService.getAllByUserId(userId, userProfileDto, includeDeleted);
+            List<OrderView> result = orderService.getAllByUserId(userId, userProfileView, includeDeleted);
 
             assertThat(result).isNotNull().hasSize(2).containsExactlyElementsOf(expectedList);
         }
@@ -201,12 +203,12 @@ public class OrderServiceImplTest {
         @Test
         void getAllByUserIdShouldReturnEmptyListWhenNoOrdersExist() {
             UUID userId = UUID.randomUUID();
-            UserProfileDto userProfileDto = Instancio.create(UserProfileDto.class);
+            UserProfileView userProfileView = Instancio.create(UserProfileView.class);
             boolean includeDeleted = false;
 
             given(orderRepository.findAllByUserId(userId, includeDeleted)).willReturn(List.of());
 
-            List<OrderProfileDto> result = orderService.getAllByUserId(userId, userProfileDto, includeDeleted);
+            List<OrderView> result = orderService.getAllByUserId(userId, userProfileView, includeDeleted);
 
             assertThat(result).isNotNull().isEmpty();
             verifyNoInteractions(orderMapper);
@@ -218,17 +220,18 @@ public class OrderServiceImplTest {
 
         @Test
         void getAllByShouldReturnPageOfOrderProfileDto() {
-            OrderParamsDto paramsDto = Instancio.create(OrderParamsDto.class);
+            OrderSearchCriteria paramsDto = Instancio.create(OrderSearchCriteria.class);
             Pageable pageable = PageRequest.of(0, 10);
             List<Order> orders = Instancio.ofList(Order.class).size(2).create();
-            List<OrderProfileDto> expectedList = Instancio.ofList(OrderProfileDto.class).size(2).create();
+            List<OrderView> expectedList =
+                    Instancio.ofList(OrderView.class).size(2).create();
             Page<Order> orderPage = new PageImpl<>(orders, pageable, orders.size());
 
             given(orderRepository.findByParams(paramsDto, pageable)).willReturn(orderPage);
-            given(orderMapper.orderToOrderProfileDto(orders.get(0), null)).willReturn(expectedList.get(0));
-            given(orderMapper.orderToOrderProfileDto(orders.get(1), null)).willReturn(expectedList.get(1));
+            given(orderMapper.toView(orders.get(0), null)).willReturn(expectedList.get(0));
+            given(orderMapper.toView(orders.get(1), null)).willReturn(expectedList.get(1));
 
-            Page<OrderProfileDto> result = orderService.getAllBy(paramsDto, pageable);
+            Page<OrderView> result = orderService.getAllBy(paramsDto, pageable);
 
             assertThat(result).isNotNull();
             assertThat(result.getTotalElements()).isEqualTo(2);
@@ -237,12 +240,12 @@ public class OrderServiceImplTest {
 
         @Test
         void getAllByShouldReturnEmptyPageWhenNoOrdersMatchParams() {
-            OrderParamsDto paramsDto = Instancio.create(OrderParamsDto.class);
+            OrderSearchCriteria paramsDto = Instancio.create(OrderSearchCriteria.class);
             Pageable pageable = PageRequest.of(0, 10);
 
             given(orderRepository.findByParams(paramsDto, pageable)).willReturn(Page.empty(pageable));
 
-            Page<OrderProfileDto> result = orderService.getAllBy(paramsDto, pageable);
+            Page<OrderView> result = orderService.getAllBy(paramsDto, pageable);
 
             assertThat(result).isNotNull().isEmpty();
             verifyNoInteractions(orderMapper);
@@ -254,53 +257,128 @@ public class OrderServiceImplTest {
 
         private UUID orderId;
         private Order existingOrder;
-        private OrderProfileDto expectedDto;
+        private OrderView expectedDto;
 
         @BeforeEach
         void init() {
             orderId = UUID.randomUUID();
             existingOrder = Instancio.create(Order.class);
-            expectedDto = Instancio.create(OrderProfileDto.class);
+            expectedDto = Instancio.create(OrderView.class);
         }
 
         @Test
         void updateShouldReturnUpdatedOrderProfileDtoWhenStatusChanges() {
             existingOrder.setStatus(Status.CREATED);
-            OrderUpdateDto updateDto = new OrderUpdateDto(Status.PAID);
+            OrderUpdateRequest updateDto = new OrderUpdateRequest(Status.PAID);
 
-            given(orderRepository.findById(orderId)).willReturn(Optional.of(existingOrder));
-            given(orderMapper.orderToOrderProfileDtoWithoutItems(existingOrder, null)).willReturn(expectedDto);
+            // ИСПРАВЛЕНО: Сервис вызывает findByIdAndDeletedFalse, а не findById
+            given(orderRepository.findByIdAndDeletedFalse(orderId)).willReturn(Optional.of(existingOrder));
+            given(orderRepository.saveAndFlush(existingOrder)).willReturn(existingOrder);
+            given(orderMapper.toView(existingOrder, null)).willReturn(expectedDto);
 
-            OrderProfileDto result = orderService.update(orderId, updateDto);
+            OrderView result = orderService.update(orderId, updateDto);
 
             assertThat(result).isNotNull().isEqualTo(expectedDto);
             assertThat(existingOrder.getStatus()).isEqualTo(Status.PAID);
+            verify(orderRepository).saveAndFlush(existingOrder);
         }
 
         @Test
         void updateShouldReturnOrderProfileWithNoChangesWhenStatusIsSame() {
             existingOrder.setStatus(Status.CREATED);
-            OrderUpdateDto updateDto = new OrderUpdateDto(Status.CREATED);
+            OrderUpdateRequest updateDto = new OrderUpdateRequest(Status.CREATED);
 
-            given(orderRepository.findById(orderId)).willReturn(Optional.of(existingOrder));
-            given(orderMapper.orderToOrderProfileDtoWithoutItems(existingOrder, null)).willReturn(expectedDto);
+            // ИСПРАВЛЕНО: Используем правильный метод репозитория
+            given(orderRepository.findByIdAndDeletedFalse(orderId)).willReturn(Optional.of(existingOrder));
+            given(orderMapper.toView(existingOrder, null)).willReturn(expectedDto);
 
-            OrderProfileDto result = orderService.update(orderId, updateDto);
+            OrderView result = orderService.update(orderId, updateDto);
 
             assertThat(result).isNotNull().isEqualTo(expectedDto);
             assertThat(existingOrder.getStatus()).isEqualTo(Status.CREATED);
+            verify(orderRepository, never()).saveAndFlush(any());
         }
 
         @Test
         void updateShouldThrowResourceNotFoundExceptionWhenOrderDoesNotExist() {
-            OrderUpdateDto updateDto = Instancio.create(OrderUpdateDto.class);
-            given(orderRepository.findById(orderId)).willReturn(Optional.empty());
+            OrderUpdateRequest updateDto = Instancio.create(OrderUpdateRequest.class);
+
+            given(orderRepository.findByIdAndDeletedFalse(orderId)).willReturn(Optional.empty());
 
             assertThatThrownBy(() -> orderService.update(orderId, updateDto))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessage(String.format(ORDER_NOT_FOUND, orderId));
 
             verifyNoInteractions(orderMapper);
+        }
+    }
+
+    @Nested
+    class ProcessPaymentTest {
+
+        private UUID orderId;
+        private Order existingOrder;
+
+        @BeforeEach
+        void init() {
+            orderId = UUID.randomUUID();
+            existingOrder = Instancio.create(Order.class);
+            existingOrder.setStatus(Status.CREATED);
+        }
+
+        @Test
+        void processPaymentShouldChangeStatusToPaidWhenSuccess() {
+            given(orderRepository.findByIdAndDeletedFalse(orderId)).willReturn(Optional.of(existingOrder));
+
+            orderService.processPayment(orderId, "SUCCESS");
+
+            assertThat(existingOrder.getStatus()).isEqualTo(Status.PAID);
+        }
+
+        @Test
+        void processPaymentShouldChangeStatusToCanceledWhenFailed() {
+            given(orderRepository.findByIdAndDeletedFalse(orderId)).willReturn(Optional.of(existingOrder));
+
+            orderService.processPayment(orderId, "FAILED");
+
+            assertThat(existingOrder.getStatus()).isEqualTo(Status.CANCELED);
+        }
+
+        @Test
+        void processPaymentShouldChangeStatusToCanceledWhenRejected() {
+            given(orderRepository.findByIdAndDeletedFalse(orderId)).willReturn(Optional.of(existingOrder));
+
+            orderService.processPayment(orderId, "REJECTED");
+
+            assertThat(existingOrder.getStatus()).isEqualTo(Status.CANCELED);
+        }
+
+        @Test
+        void processPaymentShouldDoNothingWhenAlreadyPaid() {
+            existingOrder.setStatus(Status.PAID);
+            given(orderRepository.findByIdAndDeletedFalse(orderId)).willReturn(Optional.of(existingOrder));
+
+            orderService.processPayment(orderId, "SUCCESS");
+
+            assertThat(existingOrder.getStatus()).isEqualTo(Status.PAID);
+        }
+
+        @Test
+        void processPaymentShouldDoNothingWhenUnknownStatusReceived() {
+            given(orderRepository.findByIdAndDeletedFalse(orderId)).willReturn(Optional.of(existingOrder));
+
+            orderService.processPayment(orderId, "UNKNOWN_STATUS");
+
+            assertThat(existingOrder.getStatus()).isEqualTo(Status.CREATED);
+        }
+
+        @Test
+        void processPaymentShouldThrowResourceNotFoundWhenOrderDoesNotExist() {
+            given(orderRepository.findByIdAndDeletedFalse(orderId)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> orderService.processPayment(orderId, "SUCCESS"))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessage(String.format(ORDER_NOT_FOUND, orderId));
         }
     }
 
@@ -341,7 +419,8 @@ public class OrderServiceImplTest {
         void deleteShouldSoftDeleteOrderByAdminWhenOrderExists() {
             UUID orderId = UUID.randomUUID();
 
-            given(orderRepository.deleteOrderById(any(UUID.class), any(Instant.class))).willReturn(1);
+            given(orderRepository.deleteOrderById(any(UUID.class), any(Instant.class)))
+                    .willReturn(1);
 
             orderService.delete(orderId);
 
@@ -352,7 +431,8 @@ public class OrderServiceImplTest {
         void deleteShouldThrowResourceNotFoundExceptionWhenOrderDoesNotExist() {
             UUID orderId = UUID.randomUUID();
 
-            given(orderRepository.deleteOrderById(any(UUID.class), any(Instant.class))).willReturn(0);
+            given(orderRepository.deleteOrderById(any(UUID.class), any(Instant.class)))
+                    .willReturn(0);
 
             assertThatThrownBy(() -> orderService.delete(orderId))
                     .isInstanceOf(ResourceNotFoundException.class)

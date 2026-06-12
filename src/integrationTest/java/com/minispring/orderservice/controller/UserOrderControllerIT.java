@@ -1,37 +1,5 @@
 package com.minispring.orderservice.controller;
 
-import com.minispring.orderservice.BaseIntegrationTest;
-import com.minispring.orderservice.client.UserGrpClient;
-import com.minispring.orderservice.dto.OrderCreateDto;
-import com.minispring.orderservice.dto.OrderItemCreateDto;
-import com.minispring.orderservice.dto.UserProfileDto;
-import com.minispring.orderservice.exception.ResourceNotFoundException;
-import com.minispring.orderservice.model.Item;
-import com.minispring.orderservice.model.Order;
-import com.minispring.orderservice.model.Status;
-import com.minispring.orderservice.repository.ItemRepository;
-import com.minispring.orderservice.repository.OrderRepository;
-import org.instancio.Instancio;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.assertj.MockMvcTester;
-import tools.jackson.databind.json.JsonMapper;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
 import static com.minispring.orderservice.exception.ExceptionAnswer.USER_NOT_FOUND;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.LIST;
@@ -41,6 +9,38 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
+
+import com.minispring.orderservice.BaseIntegrationTest;
+import com.minispring.orderservice.client.UserGrpcClient;
+import com.minispring.orderservice.dto.request.OrderCreateRequest;
+import com.minispring.orderservice.dto.request.OrderItemCreateRequest;
+import com.minispring.orderservice.dto.response.UserProfileView;
+import com.minispring.orderservice.exception.ResourceNotFoundException;
+import com.minispring.orderservice.model.Item;
+import com.minispring.orderservice.model.Order;
+import com.minispring.orderservice.model.Status;
+import com.minispring.orderservice.repository.ItemRepository;
+import com.minispring.orderservice.repository.OrderRepository;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import org.instancio.Instancio;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvFileSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.assertj.MockMvcTester;
+import tools.jackson.databind.json.JsonMapper;
 
 @AutoConfigureMockMvc
 public class UserOrderControllerIT extends BaseIntegrationTest {
@@ -58,31 +58,25 @@ public class UserOrderControllerIT extends BaseIntegrationTest {
     private JsonMapper jsonMapper;
 
     @MockitoBean
-    private UserGrpClient userGrpcService;
+    private UserGrpcClient userGrpcService;
 
     private static final String BASE_URL = "/api/v1/orders";
 
-    private UserProfileDto mockUser;
+    private UserProfileView mockUser;
     private Item savedItem;
     private Order savedOrder;
 
     @BeforeEach
-    public void init(TestInfo testInfo) {
-        mockUser = Instancio.of(UserProfileDto.class)
-                .generate(field(UserProfileDto::email), gen -> gen.text().pattern("#c#c#c#c#c@domain.com"))
-                .set(field(UserProfileDto::birthDate), LocalDate.now().minusYears(20))
+    public void init() {
+        mockUser = Instancio.of(UserProfileView.class)
+                .generate(field(UserProfileView::email), gen -> gen.text().pattern("#c#c#c#c#c@domain.com"))
+                .set(field(UserProfileView::birthDate), LocalDate.now().minusYears(20))
                 .create();
-        given(userGrpcService.getUserByEmail(mockUser.email())).willReturn(mockUser);
-        given(userGrpcService.getUserById(mockUser.id())).willReturn(mockUser);
-        given(userGrpcService.getUsersByIds(anySet())).willReturn(Map.of(mockUser.id(), mockUser));
+        given(userGrpcClient.getUserByEmail(mockUser.email())).willReturn(mockUser);
+        given(userGrpcClient.getUserById(mockUser.id())).willReturn(mockUser);
+        given(userGrpcClient.getUsersByIds(anySet())).willReturn(Map.of(mockUser.id(), mockUser));
 
-        if (testInfo.getTags().contains("init")) {
-            return;
-        }
-
-        Item item = Instancio.of(Item.class)
-                .ignore(field(Item::getId))
-                .create();
+        Item item = Instancio.of(Item.class).ignore(field(Item::getId)).create();
         savedItem = itemRepository.saveAndFlush(item);
 
         Order order = Instancio.of(Order.class)
@@ -107,64 +101,61 @@ public class UserOrderControllerIT extends BaseIntegrationTest {
 
         @Test
         void createShouldReturnCreatedOrderForAuthorizedUser() {
-            OrderItemCreateDto itemDto = Instancio.of(OrderItemCreateDto.class)
-                    .set(field(OrderItemCreateDto::itemId), savedItem.getId())
-                    .set(field(OrderItemCreateDto::quantity), 2)
+            OrderItemCreateRequest itemDto = Instancio.of(OrderItemCreateRequest.class)
+                    .set(field(OrderItemCreateRequest::itemId), savedItem.getId())
+                    .set(field(OrderItemCreateRequest::quantity), 2)
                     .create();
 
-            OrderCreateDto createDto = Instancio.of(OrderCreateDto.class)
-                    .set(field(OrderCreateDto::email), mockUser.email())
-                    .set(field(OrderCreateDto::items), List.of(itemDto))
+            OrderCreateRequest createDto = Instancio.of(OrderCreateRequest.class)
+                    .set(field(OrderCreateRequest::items), List.of(itemDto))
                     .create();
 
             assertThat(mockMvcTester.perform(post(BASE_URL)
-                    .header("TokenEmail", mockUser.email())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(jsonMapper.writeValueAsString(createDto))))
+                            .with(userJwt(mockUser.id(), mockUser.email()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(jsonMapper.writeValueAsString(createDto))))
                     .hasStatus(HttpStatus.CREATED)
                     .bodyJson()
                     .hasPath("$.id")
-                    .hasPathSatisfying("$.user.id", id -> assertThat(id).isEqualTo(mockUser.id().toString()));
+                    .hasPathSatisfying("$.user.id", id -> assertThat(id)
+                            .isEqualTo(mockUser.id().toString()));
         }
 
         @Test
-        @Tag("init")
         void createShouldReturnNotFoundWhenItemDoesNotExist() {
-            OrderItemCreateDto missingItemDto = Instancio.of(OrderItemCreateDto.class)
-                    .set(field(OrderItemCreateDto::itemId), 999L)
+            OrderItemCreateRequest missingItemDto = Instancio.of(OrderItemCreateRequest.class)
+                    .set(field(OrderItemCreateRequest::itemId), 999L)
+                    .set(field(OrderItemCreateRequest::quantity), 1)
                     .create();
 
-            OrderCreateDto createDto = Instancio.of(OrderCreateDto.class)
-                    .set(field(OrderCreateDto::email), mockUser.email())
-                    .set(field(OrderCreateDto::items), List.of(missingItemDto))
+            OrderCreateRequest createDto = Instancio.of(OrderCreateRequest.class)
+                    .set(field(OrderCreateRequest::items), List.of(missingItemDto))
                     .create();
 
             assertThat(mockMvcTester.perform(post(BASE_URL)
-                    .header("TokenEmail", mockUser.email())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(jsonMapper.writeValueAsString(createDto))))
+                            .with(userJwt(mockUser.id(), mockUser.email()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(jsonMapper.writeValueAsString(createDto))))
                     .hasStatus(HttpStatus.NOT_FOUND);
         }
 
         @Test
-        @Tag("init")
         void createShouldReturnServiceUnavailableWhenUserServiceFallbackTriggers() {
-            given(userGrpcService.getUserByEmail(mockUser.email())).willReturn(null);
+            given(userGrpcClient.getUserByEmail(mockUser.email())).willReturn(null);
 
-            OrderItemCreateDto itemDto = Instancio.of(OrderItemCreateDto.class)
-                    .set(field(OrderItemCreateDto::itemId), 1L)
-                    .set(field(OrderItemCreateDto::quantity), 1)
+            OrderItemCreateRequest itemDto = Instancio.of(OrderItemCreateRequest.class)
+                    .set(field(OrderItemCreateRequest::itemId), 1L)
+                    .set(field(OrderItemCreateRequest::quantity), 1)
                     .create();
 
-            OrderCreateDto createDto = Instancio.of(OrderCreateDto.class)
-                    .set(field(OrderCreateDto::email), mockUser.email())
-                    .set(field(OrderCreateDto::items), List.of(itemDto))
+            OrderCreateRequest createDto = Instancio.of(OrderCreateRequest.class)
+                    .set(field(OrderCreateRequest::items), List.of(itemDto))
                     .create();
 
             assertThat(mockMvcTester.perform(post(BASE_URL)
-                    .header("TokenEmail", mockUser.email())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(jsonMapper.writeValueAsString(createDto))))
+                            .with(userJwt(mockUser.id(), mockUser.email()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(jsonMapper.writeValueAsString(createDto))))
                     .hasStatus(HttpStatus.SERVICE_UNAVAILABLE);
         }
     }
@@ -174,31 +165,35 @@ public class UserOrderControllerIT extends BaseIntegrationTest {
 
         @Test
         void getOrderByIdShouldReturnSingleOrderWhenUserOwnsIt() {
-            assertThat(mockMvcTester.perform(get(BASE_URL + "/{id}", savedOrder.getId())
-                    .header("TokenId", mockUser.id().toString())))
+            assertThat(mockMvcTester.perform(
+                            get(BASE_URL + "/{id}", savedOrder.getId()).with(userJwt(mockUser.id(), mockUser.email()))))
                     .hasStatusOk()
                     .bodyJson()
-                    .hasPathSatisfying("$.id", id -> assertThat(id).isEqualTo(savedOrder.getId().toString()))
-                    .hasPathSatisfying("$.user.id", id -> assertThat(id).isEqualTo(mockUser.id().toString()));
+                    .hasPathSatisfying("$.id", id -> assertThat(id)
+                            .isEqualTo(savedOrder.getId().toString()))
+                    .hasPathSatisfying("$.user.id", id -> assertThat(id)
+                            .isEqualTo(mockUser.id().toString()));
         }
 
         @Test
         void getOrderByIdShouldReturnNotFoundWhenUserAttemptsToFetchSomeoneElseOrder() {
             assertThat(mockMvcTester.perform(get(BASE_URL + "/{id}", savedOrder.getId())
-                    .header("TokenId", UUID.randomUUID().toString())))
+                            .with(userJwt(UUID.randomUUID(), "stranger@mail.com"))))
                     .hasStatus(HttpStatus.NOT_FOUND);
         }
 
         @Test
         void getOrderByIdShouldReturnOrderWithNullUserWhenGrpcServiceIsDown() {
-            given(userGrpcService.getUserById(mockUser.id())).willReturn(null);
+            given(userGrpcClient.getUserById(mockUser.id())).willReturn(null);
 
-            assertThat(mockMvcTester.perform(get(BASE_URL + "/{id}", savedOrder.getId())
-                    .header("TokenId", mockUser.id().toString())))
+            assertThat(mockMvcTester.perform(
+                            get(BASE_URL + "/{id}", savedOrder.getId()).with(userJwt(mockUser.id(), mockUser.email()))))
                     .hasStatusOk()
                     .bodyJson()
-                    .hasPathSatisfying("$.user", userField -> assertThat(userField).isNull())
-                    .hasPathSatisfying("$.userServiceAvailable", av -> assertThat(av).isEqualTo(false));
+                    .hasPathSatisfying(
+                            "$.user", userField -> assertThat(userField).isNull())
+                    .hasPathSatisfying(
+                            "$.userServiceAvailable", av -> assertThat(av).isEqualTo(false));
         }
     }
 
@@ -207,44 +202,44 @@ public class UserOrderControllerIT extends BaseIntegrationTest {
 
         @Test
         void getUserOrdersShouldReturnListOfOrdersWithUserData() {
-            assertThat(mockMvcTester.perform(get(BASE_URL)
-                    .header("TokenId", mockUser.id().toString())))
+            assertThat(mockMvcTester.perform(get(BASE_URL).with(userJwt(mockUser.id(), mockUser.email()))))
                     .hasStatusOk()
                     .bodyJson()
-                    .hasPathSatisfying("$", orders -> assertThat(orders).asInstanceOf(LIST).hasSize(1))
-                    .hasPathSatisfying("$[0].user.email", email -> assertThat(email).isEqualTo(mockUser.email()));
+                    .hasPathSatisfying(
+                            "$", orders -> assertThat(orders).asInstanceOf(LIST).hasSize(1))
+                    .hasPathSatisfying(
+                            "$[0].user.email", email -> assertThat(email).isEqualTo(mockUser.email()));
         }
 
         @Test
         void getUserOrdersShouldReturnOrdersWithNullUserWhenGrpcFails() {
-            given(userGrpcService.getUserById(mockUser.id())).willReturn(null);
+            given(userGrpcClient.getUserById(mockUser.id())).willReturn(null);
 
-            assertThat(mockMvcTester.perform(get(BASE_URL)
-                    .header("TokenId", mockUser.id().toString())))
+            assertThat(mockMvcTester.perform(get(BASE_URL).with(userJwt(mockUser.id(), mockUser.email()))))
                     .hasStatusOk()
                     .bodyJson()
-                    .hasPathSatisfying("$[0].user", userField -> assertThat(userField).isNull());
+                    .hasPathSatisfying(
+                            "$[0].user", userField -> assertThat(userField).isNull());
         }
 
         @Test
         void getUserOrdersShouldReturnNotFoundWhenUserDoesNotExistInSystem() {
             UUID unknownUserId = UUID.randomUUID();
-            given(userGrpcService.getUserById(unknownUserId))
+            given(userGrpcClient.getUserById(unknownUserId))
                     .willThrow(new ResourceNotFoundException(String.format(USER_NOT_FOUND, unknownUserId)));
 
-            assertThat(mockMvcTester.perform(get(BASE_URL)
-                    .header("TokenId", unknownUserId.toString())))
+            assertThat(mockMvcTester.perform(get(BASE_URL).with(userJwt(unknownUserId, "ghost@mail.com"))))
                     .hasStatus(HttpStatus.NOT_FOUND);
         }
 
         @Test
-        @Tag("init")
         void getUserOrdersShouldReturnEmptyListWhenUserHasNoActiveOrders() {
-            assertThat(mockMvcTester.perform(get(BASE_URL)
-                    .header("TokenId", mockUser.id().toString())))
+            orderRepository.deleteAll();
+            assertThat(mockMvcTester.perform(get(BASE_URL).with(userJwt(mockUser.id(), mockUser.email()))))
                     .hasStatusOk()
                     .bodyJson()
-                    .hasPathSatisfying("$", orders -> assertThat(orders).asInstanceOf(LIST).isEmpty());
+                    .hasPathSatisfying(
+                            "$", orders -> assertThat(orders).asInstanceOf(LIST).isEmpty());
         }
     }
 
@@ -265,10 +260,12 @@ public class UserOrderControllerIT extends BaseIntegrationTest {
             long itemsCount = itemRepository.count();
 
             assertThat(mockMvcTester.perform(delete(BASE_URL + "/{id}", savedOrder.getId())
-                    .header("TokenId", mockUser.id().toString())))
+                            .with(userJwt(mockUser.id(), mockUser.email()))))
                     .hasStatus(HttpStatus.NO_CONTENT);
 
-            Order deletedOrder = orderRepository.findOrderByIdIncludingDeleted(savedOrder.getId()).orElseThrow();
+            Order deletedOrder = orderRepository
+                    .findOrderByIdIncludingDeleted(savedOrder.getId())
+                    .orElseThrow();
             assertThat(deletedOrder.isDeleted()).isTrue();
 
             Order untouchedOrder = orderRepository.findById(order.getId()).orElseThrow();
@@ -280,11 +277,22 @@ public class UserOrderControllerIT extends BaseIntegrationTest {
         @Test
         void deleteShouldReturnNotFoundWhenUserTriesToDeleteStrangersOrder() {
             assertThat(mockMvcTester.perform(delete(BASE_URL + "/{id}", savedOrder.getId())
-                    .header("TokenId", UUID.randomUUID().toString())))
+                            .with(userJwt(UUID.randomUUID(), "stranger@mail.com"))))
                     .hasStatus(HttpStatus.NOT_FOUND);
 
             Order notDeletedOrder = orderRepository.findById(savedOrder.getId()).orElseThrow();
             assertThat(notDeletedOrder.isDeleted()).isFalse();
+        }
+    }
+
+    @Nested
+    class SecurityAuthorizationTests {
+
+        @ParameterizedTest
+        @CsvFileSource(resources = "/testdata/user/user-security-routes.csv", numLinesToSkip = 1)
+        void shouldDenyAccessWithoutToken(String method, String route) {
+            assertThat(mockMvcTester.perform(request(HttpMethod.valueOf(method), route)))
+                    .hasStatus(HttpStatus.UNAUTHORIZED);
         }
     }
 }

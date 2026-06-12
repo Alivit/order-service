@@ -1,0 +1,7 @@
+method,route
+POST,/api/v1/admin/orders
+GET,/api/v1/admin/orders/123e4567-e89b-12d3-a456-426614174000
+GET,/api/v1/admin/orders
+GET,/api/v1/admin/orders/user/123e4567-e89b-12d3-a456-426614174000
+PUT,/api/v1/admin/orders/123e4567-e89b-12d3-a456-426614174000/status
+DELETE,/api/v1/admin/orders/123e4567-e89b-12d3-a456-426614174000
