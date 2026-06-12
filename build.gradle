@@ -38,6 +38,18 @@ repositories {
     mavenCentral()
 }
 
+sourceSets {
+    integrationTest {
+        java.srcDir file('src/integrationTest/java')
+        resources.srcDir file('src/integrationTest/resources')
+        compileClasspath += sourceSets.main.output + sourceSets.test.output
+        runtimeClasspath += sourceSets.main.output + sourceSets.test.output
+    }
+}
+
+configurations.integrationTestImplementation.extendsFrom(configurations.testImplementation)
+configurations.integrationTestRuntimeOnly.extendsFrom(configurations.testRuntimeOnly)
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
@@ -76,8 +88,31 @@ dependencies {
     testAnnotationProcessor 'org.projectlombok:lombok'
 }
 
+tasks.register('integrationTest', Test) {
+    description = 'Runs integration tests using Testcontainers.'
+    group = 'verification'
+
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+
+    useJUnitPlatform()
+    shouldRunAfter test
+
+    maxParallelForks = 1
+    forkEvery = 5
+    minHeapSize = "512m"
+    maxHeapSize = "2048m"
+    systemProperty "spring.profiles.active", "test"
+}
+
+check.dependsOn integrationTest
+
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+tasks.named('processIntegrationTestResources', Copy) {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
 tasks.named('sonar') {

@@ -16,7 +16,8 @@ public record OrderParamsDto(
 
         @PastOrPresent(message = "The end date must be in the past or present")
         Instant createdAtTo,
-        boolean includeDeleted
+
+        Boolean includeDeleted
 ) {
     public OrderParamsDto {
         if (createdAtFrom != null && createdAtTo != null && createdAtFrom.isAfter(createdAtTo)) {
@@ -25,6 +26,10 @@ public record OrderParamsDto(
 
         if (statuses == null) {
             statuses = List.of();
+        }
+
+        if (includeDeleted == null) {
+            includeDeleted = false;
         }
     }
 }

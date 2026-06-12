@@ -47,7 +47,8 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderMapper.orderCreateDtoToOrder(orderCreateDto);
         order.setUserId(user.id());
         order.addItems(orderCreateDto.items(), getItemsMap(orderCreateDto));
-        return orderMapper.orderToOrderProfileDto(orderRepository.save(order), user);
+        Order savedOrder = orderRepository.save(order);
+        return orderMapper.orderToOrderProfileDto(savedOrder, user);
     }
 
     @Override
