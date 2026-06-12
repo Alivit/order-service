@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: order-service-test
+
+  datasource:
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 10
+      connection-timeout: 5000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        default_schema: public
+    open-in-view: false
+
+  liquibase:
+    enabled: true
+    change-log: db/changelog/changelog.yml
+    default-schema: public
+
+  task:
+    execution:
+      pool:
+        core-size: 0
+        max-size: 1
+        queue-capacity: 0
+      thread-name-prefix: test-sync-task-
