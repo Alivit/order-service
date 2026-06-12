@@ -17,12 +17,16 @@ public interface OrderService {
 
     OrderProfileDto getById(UUID orderId, UserProfileDto user);
 
+    OrderProfileDto getByIdAndUserId(UUID orderId, UUID userId);
+
     List<OrderProfileDto> getAllByUserId(UUID userId, UserProfileDto user, boolean includeDeleted);
 
     Page<OrderProfileDto> getAllBy(OrderParamsDto orderParamsDto, Pageable pageable);
 
-    OrderProfileDto update(UUID orderId, OrderUpdateDto orderUpdateDto, UserProfileDto user);
+    OrderProfileDto update(UUID orderId, OrderUpdateDto orderUpdateDto);
 
     void delete(UUID orderId, UUID userId);
+
+    void delete(UUID orderId);
 
 }

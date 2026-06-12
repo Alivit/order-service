@@ -11,5 +11,6 @@ spring:
   grpc:
     client:
       channels:
-        user-service:
-          address: static://localhost:9091
+        userServiceGrpc:
+          address: 'static://localhost:9091'
+          secure: false

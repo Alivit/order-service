@@ -56,6 +56,15 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public OrderProfileDto getByIdAndUserId(UUID orderId, UUID userId) {
+        Order order = orderRepository.findByIdAndUserIdAndDeletedFalse(orderId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(ORDER_NOT_FOUND, orderId)));
+
+        return orderMapper.orderToOrderProfileDto(order, null);
+    }
+
+    @Override
     public List<OrderProfileDto> getAllByUserId(UUID userId, UserProfileDto user, boolean includeDeleted) {
         return orderRepository.findAllByUserId(userId, includeDeleted)
                 .stream()
@@ -72,14 +81,14 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     @Override
     @Retryable(value = ObjectOptimisticLockingFailureException.class, maxRetries = 2, delay = 100)
-    public OrderProfileDto update(UUID orderId, OrderUpdateDto orderUpdateDto, UserProfileDto user) {
+    public OrderProfileDto update(UUID orderId, OrderUpdateDto orderUpdateDto) {
         Order order = getExistsOrderById(orderId);
         if (!order.getStatus().equals(orderUpdateDto.status())) {
             order.setStatus(orderUpdateDto.status());
             order.setUpdatedAt(Instant.now());
             log.info("Order with id {}, status has been changed to {}", orderId, orderUpdateDto.status());
         }
-        return orderMapper.orderToOrderProfileDtoWithoutItems(order, user);
+        return orderMapper.orderToOrderProfileDtoWithoutItems(order, null);
     }
 
     @Transactional
@@ -90,6 +99,16 @@ public class OrderServiceImpl implements OrderService {
             throw new ResourceNotFoundException(String.format(ORDER_NOT_FOUND, orderId));
         }
         log.info("Order {} soft-deleted by user {}", orderId, userId);
+    }
+
+    @Transactional
+    @Override
+    public void delete(UUID orderId) {
+        int deletedRows = orderRepository.deleteOrderById(orderId, Instant.now());
+        if (deletedRows == 0) {
+            throw new ResourceNotFoundException(String.format(ORDER_NOT_FOUND, orderId));
+        }
+        log.info("Order {} soft-deleted by admin", orderId);
     }
 
     private Order getExistsOrderByIdIncludingDeleted(UUID orderId) {

@@ -1,14 +1,14 @@
 package com.minispring.orderservice.dto;
 
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 
 public record OrderItemCreateDto(
-        @NotNull
+        @NotNull(message = "Item ID must not be null")
         Long itemId,
 
-        @NotNull
-        @Min(value = 1)
+        @NotNull(message = "Quantity must not be null")
+        @Positive(message = "Quantity must be greater than zero")
         Integer quantity
 ) {
 }
