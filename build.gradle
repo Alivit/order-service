@@ -50,7 +50,7 @@ dependencies {
     implementation 'com.google.protobuf:protobuf-java:4.35.0'
     implementation 'com.google.protobuf:protobuf-java-util:4.35.0'
     implementation 'net.lbruun.springboot:preliquibase-spring-boot-starter:2.0.0'
-    implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.4.0'
+    implementation 'io.github.resilience4j:resilience4j-spring-boot4:2.4.0'
     implementation 'io.github.resilience4j:resilience4j-micrometer:2.4.0'
     implementation 'org.apache.commons:commons-pool2'
     implementation 'org.zalando:logbook-spring-boot-starter:4.0.1'

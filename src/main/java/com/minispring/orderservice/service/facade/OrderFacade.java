@@ -34,9 +34,16 @@ public class OrderFacade {
         return orderService.create(orderCreateDto, user);
     }
 
-    public OrderProfileDto getOrderById(UUID orderId, String email) {
+    public OrderProfileDto getOrderByIdAndEmail(UUID orderId, String email) {
         UserProfileDto user = userGrpcService.getUserByEmail(email);
         return orderService.getById(orderId, user);
+    }
+
+    public OrderProfileDto getOrderByIdAndUserId(UUID orderId, UUID userId) {
+        OrderProfileDto order = orderService.getByIdAndUserId(orderId, userId);
+        UserProfileDto user = userGrpcService.getUserById(userId);
+
+        return order.toBuilder().user(user).userServiceAvailable(user != null).build();
     }
 
     public List<OrderProfileDto> getAllOrdersByUserId(UUID userId, boolean includeDeleted) {
@@ -63,13 +70,18 @@ public class OrderFacade {
         });
     }
 
-    public OrderProfileDto updateOrderStatus(UUID orderId, OrderUpdateDto orderUpdateDto, String email) {
-        UserProfileDto user = userGrpcService.getUserByEmail(email);
-        return orderService.update(orderId, orderUpdateDto, user);
+    public OrderProfileDto updateOrderStatus(UUID orderId, OrderUpdateDto orderUpdateDto) {
+        OrderProfileDto order = orderService.update(orderId, orderUpdateDto);
+        UserProfileDto user = userGrpcService.getUserById(order.userId());
+        return order.toBuilder().user(user).userServiceAvailable(user != null).build();
     }
 
     public void deleteOrder(UUID orderId, UUID userId) {
         orderService.delete(orderId, userId);
+    }
+
+    public void deleteOrder(UUID orderId) {
+        orderService.delete(orderId);
     }
 
 }

@@ -2,10 +2,8 @@ package com.minispring.orderservice.mapper;
 
 import com.minispring.orderservice.dto.ItemDto;
 import com.minispring.orderservice.dto.OrderCreateDto;
-import com.minispring.orderservice.dto.OrderItemCreateDto;
 import com.minispring.orderservice.dto.OrderProfileDto;
 import com.minispring.orderservice.dto.UserProfileDto;
-import com.minispring.orderservice.model.Item;
 import com.minispring.orderservice.model.Order;
 import com.minispring.orderservice.model.OrderItem;
 import org.mapstruct.Builder;

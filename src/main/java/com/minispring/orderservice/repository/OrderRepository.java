@@ -29,9 +29,15 @@ public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecific
     @Query("SELECT o FROM Order o WHERE o.userId = :userId AND (:includeDeleted = true OR o.deleted = false)")
     List<Order> findAllByUserId(@Param("userId") UUID userId, @Param("includeDeleted") boolean includeDeleted);
 
+    Optional<Order> findByIdAndUserIdAndDeletedFalse(UUID id, UUID userId);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Order o SET o.deleted = true, o.updatedAt = :now WHERE o.id = :orderId AND o.userId = :userId")
     int deleteOrderByIdAndUserId(@Param("orderId") UUID orderId, @Param("userId") UUID userId, @Param("now") Instant now);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Order o SET o.deleted = true, o.updatedAt = :now WHERE o.id = :orderId")
+    int deleteOrderById(@Param("orderId") UUID orderId, @Param("now") Instant now);
 
     default Page<Order> findByParams(OrderParamsDto params, Pageable pageable) {
         if (params == null) {

@@ -43,7 +43,7 @@ public class UserGrpClient {
                 .setEmail(email)
                 .build();
         try {
-            return userMapper.fromGrpcToUserProfileDto(userGrpcStub.withDeadlineAfter(2, TimeUnit.SECONDS)
+            return userMapper.fromGrpcToUserProfileDto(userGrpcStub.withDeadlineAfter(5, TimeUnit.SECONDS)
                     .getUserByEmail(request)
                     .getUser()
             );
