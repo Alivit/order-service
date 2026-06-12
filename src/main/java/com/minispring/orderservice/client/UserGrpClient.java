@@ -43,7 +43,7 @@ public class UserGrpClient {
                 .setEmail(email)
                 .build();
         try {
-            return userMapper.fromGrpcToUserProfileDto(userGrpcStub.withDeadlineAfter(5, TimeUnit.SECONDS)
+            return userMapper.fromGrpcToUserProfileDto(userGrpcStub.withDeadlineAfter(10, TimeUnit.SECONDS)
                     .getUserByEmail(request)
                     .getUser()
             );
@@ -63,7 +63,7 @@ public class UserGrpClient {
                 .setUserId(userId.toString())
                 .build();
         try {
-            return userMapper.fromGrpcToUserProfileDto(userGrpcStub.withDeadlineAfter(2, TimeUnit.SECONDS)
+            return userMapper.fromGrpcToUserProfileDto(userGrpcStub.withDeadlineAfter(10, TimeUnit.SECONDS)
                     .getUserById(request)
                     .getUser()
             );
@@ -93,7 +93,7 @@ public class UserGrpClient {
                 .build();
 
         try {
-            GetUsersByIdsResponse response = userGrpcStub.withDeadlineAfter(2, TimeUnit.SECONDS)
+            GetUsersByIdsResponse response = userGrpcStub.withDeadlineAfter(10, TimeUnit.SECONDS)
                     .getUsersByIds(request);
 
             return response.getUsersList().stream()

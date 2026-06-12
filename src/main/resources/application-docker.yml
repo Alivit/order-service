@@ -1,18 +1,30 @@
-server:
-  port: 8083
 spring:
   datasource:
-    url: ${DOCKER_DATABASE_URL}
-    username: ${DOCKER_DB_USER}
-    password: ${DOCKER_DB_PASSWORD}
+    url: ${ORDER_DB_URL}
+    username: ${ORDER_DB_USERNAME}
+    password: ${ORDER_DB_PASSWORD}
   jpa:
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${APP_JWK_SET_URI_DOCKER}
   grpc:
     client:
       channels:
-        userServiceGrpc:
-          address: 'static://user-service:9091'
-          secure: false
+        user-service-grpc:
+          address: 'user-service:${USER_GRPC_SERVER_PORT}'
+          negotiation-type: plaintext
+logging:
+  level:
+    root: INFO
+    com.minispring: TRACE
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG
+    org.springframework.grpc: DEBUG
+    io.grpc: DEBUG
+    liquibase: INFO

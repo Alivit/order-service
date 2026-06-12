@@ -41,6 +41,8 @@ public interface OrderMapper {
     @Mapping(target = "name", source = "item.name")
     @Mapping(target = "price", source = "item.price")
     @Mapping(target = "quantity", source = "quantity")
+    @Mapping(target = "createdAt", source = "item.createdAt")
+    @Mapping(target = "updatedAt", source = "item.updatedAt")
     ItemDto orderItemToItemDto(OrderItem orderItem);
 
 }

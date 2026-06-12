@@ -6,6 +6,8 @@ import com.minispring.orderservice.service.facade.OrderFacade;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,8 +31,8 @@ public class UserOrderController {
 
     @PostMapping
     public ResponseEntity<OrderProfileDto> create(@Valid @RequestBody OrderCreateDto request,
-                                                  @RequestHeader("TokenEmail") String email){
-        OrderProfileDto response = orderFacade.createOrder(request, email);
+                                                  @AuthenticationPrincipal Jwt jwt){
+        OrderProfileDto response = orderFacade.createOrder(request, jwt.getClaimAsString("email"));
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{id}")
@@ -41,19 +43,19 @@ public class UserOrderController {
 
     @GetMapping("/{id}")
     public ResponseEntity<OrderProfileDto> getOrderById(@PathVariable UUID id,
-                                                        @RequestHeader("TokenId") UUID userId
+                                                        @AuthenticationPrincipal Jwt jwt
     ) {
-        return ResponseEntity.ok(orderFacade.getOrderByIdAndUserId(id, userId));
+        return ResponseEntity.ok(orderFacade.getOrderByIdAndUserId(id, UUID.fromString(jwt.getSubject())));
     }
 
     @GetMapping
-    public ResponseEntity<List<OrderProfileDto>> getUserOrders(@RequestHeader("TokenId") UUID userId) {
-        return ResponseEntity.ok(orderFacade.getAllOrdersByUserId(userId, false));
+    public ResponseEntity<List<OrderProfileDto>> getUserOrders(@AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(orderFacade.getAllOrdersByUserId(UUID.fromString(jwt.getSubject()), false));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id, @RequestHeader("TokenId") UUID userId) {
-        orderFacade.deleteOrder(id, userId);
+    public ResponseEntity<Void> delete(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+        orderFacade.deleteOrder(id, UUID.fromString(jwt.getSubject()));
         return ResponseEntity.noContent().build();
     }
 }

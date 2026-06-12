@@ -4,11 +4,12 @@ WORKDIR /app
 ENV GRADLE_OPTS="-Xmx1536m -XX:MaxMetaspaceSize=384m -Dorg.gradle.jvmargs=-Xmx1536m"
 
 COPY build.gradle settings.gradle ./
-RUN --mount=type=cache,target=/root/.gradle/caches \
+RUN --mount=type=cache,target=/home/gradle/.gradle/caches,sharing=locked \
     gradle dependencies --no-daemon --max-workers=1
 
 COPY src ./src
-RUN --mount=type=cache,target=/root/.gradle/caches \
+
+RUN --mount=type=cache,target=/home/gradle/.gradle/caches,sharing=locked \
     gradle clean generateProto bootJar --no-daemon -x test --max-workers=1
 
 RUN mv build/libs/$(ls build/libs/ | grep -v plain) /app/app.jar
